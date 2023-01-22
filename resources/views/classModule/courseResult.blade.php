@@ -13,6 +13,17 @@
   overflow-y: auto;
   max-height: 200px;
 }
+#spinner-div {
+  position: fixed;
+  display: none;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 2;
+}
 </style>
 
 <main class="d-flex">
@@ -70,9 +81,12 @@
 
 <div class="container-fluid">
           
-    {{-- <div id="form-alert">
-
-    </div> --}}
+    @if( Session::has("success") )
+        <div class="alert alert-success alert-block" role="alert">
+            <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+            {{ Session::get("success") }}
+        </div>
+    @endif
     
     @if (Auth::user()->isTeacher == 1)
     <div class="card">
@@ -109,13 +123,16 @@
                                 <td>
                                     @foreach ($student->course_info as $item)
                                         @if ($item->grade != null)
+                                        @php
+                                            $result = $item->grade;
+                                        @endphp
                                             {{ $item->grade }}
                                         @endif
                                     @endforeach
                                 </td>
                                 <td>
                                     <button type="button" class="btn btn-primary" onclick="showDetails({!! $key !!})">
-                                        Assign Result
+                                        {{ isset($item->grade) ? 'Re assign' : 'Assign' }} Result
                                     </button>
                                 </td>
                             </tr>
@@ -138,22 +155,29 @@
                     <th>GPA</th>
                 </thead>
                 <tbody>
-                    @foreach ($students[0]->course_info as $key => $student)
+                    @foreach ($students as $key => $student)
+                        
                         <tr>
                             <th scope="row">{{ $key+1 }}</th>
                             <td>
                                 <a href="">
-                                    {{ $students[0]->name }}
+                                    {{ $student->name }}
                                 </a>
                             </td>
                             <td>
-                                {{ $student->semester->name }}
+                                @if(isset($student->course_info))
+                                    {{ $student->course_info->semester->name }} 
+                                @endif
                             </td>
                             <td>
-                                {{$classModule->section->course->name}}
+                                {{ $classModule->section->course->name }}
                             </td>
                             <td>
-                                {{ $student->grade }}
+                                @if(isset($student->course_info))
+                                    {{ $student->course_info->grade }}
+                                @else
+                                    TBA
+                                @endif
                             </td>
                         </tr>
                     
@@ -204,7 +228,7 @@
 <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    
+    $('#spinner-div').hide();
     var overflowAuto = document.getElementsByClassName('overflowAuto')[0];
 
     //Get the distance from the top and add 20px for the padding
@@ -268,6 +292,12 @@
                             Assign GPA
                         </button>
                     </td>
+                    <td>
+                        <div id="spinner-div" class="pt-5">
+                            <div class="spinner-border text-primary" role="status">
+                            </div>
+                        </div>
+                    <td>
                 </tr>
             `
         });
@@ -290,16 +320,17 @@
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             }
         });
-   
+        $('#spinner-div').show();
         $.ajax({
             type:'POST',
             url:"{{ route('updateGPA') }}",
             data,
                 success:function(data){
                     if(data.success) {
+                        $('#spinner-div').hide();
                         $('#exampleModal').modal('hide');
+                        location.reload();
                         fireToast("success", `${data.success}`);
-                        
                         // let alert = `<div class="alert alert-success">
                         //     <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
                         //     <span id="success-mssg">${data.success}</span>

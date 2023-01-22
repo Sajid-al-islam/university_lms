@@ -52,12 +52,13 @@ class ClassModuleController extends Controller
             $students = [];
             foreach ($class->section->student_courses as $key => $cstudents) {
                 foreach ($cstudents->students as $key => $student) {
-                    $course_info = StudentCourses::where('user_id', Auth::user()->id)->with(['semester', 'single_section', 'single_course'])->get();
+                    $course_info = StudentCourses::where('user_id', $student->id)->where('grade', '!=', null)->with(['semester', 'single_section', 'single_course'])->first();
                     $student->course_info = $course_info;
                     array_push($students, $student);
                 }
             }
-            $students = collect($students)->unique('id')->all();
+            $students = collect($students)->where('id', Auth::user()->id)->all();
+            // $students = $students->where()
         }else {
             $students = [];
             foreach ($class->section->student_courses as $key => $cstudents) {
@@ -114,9 +115,9 @@ class ClassModuleController extends Controller
         ];
 
         $userMail = User::where('id', $request->user_id)->select('email')->first();
-        $when = now()->addMinutes(1);
+        // $when = now()->addMinutes(1);
         
-        Mail::to($userMail)->later($when, new ResultMail($result));
+        Mail::to($userMail)->send(new ResultMail($result));
 
         $request->session()->flash('success', 'Result Assigned succcessfully.');
 
